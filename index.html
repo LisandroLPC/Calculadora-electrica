@@ -490,11 +490,11 @@
     <div class="inputs-row">
       <div>
         <label>Corriente (A)</label>
-        <input type="number" id="drop_I" placeholder="Ej: 16" oninput="calcDrop()">
+        <input type="text" inputmode="decimal" id="drop_I" placeholder="Ej: 16" oninput="calcDrop()">
       </div>
       <div>
         <label>Longitud (m, un tramo)</label>
-        <input type="number" id="drop_L" placeholder="Ej: 25" oninput="calcDrop()">
+        <input type="text" inputmode="decimal" id="drop_L" placeholder="Ej: 25" oninput="calcDrop()">
       </div>
     </div>
     <div class="inputs-row">
@@ -516,7 +516,7 @@
       </div>
       <div>
         <label>Tensión nominal (V)</label>
-        <input type="number" id="drop_V" placeholder="220" value="220" oninput="calcDrop()">
+        <input type="text" inputmode="decimal" id="drop_V" placeholder="220" value="220" oninput="calcDrop()">
       </div>
     </div>
 
@@ -545,21 +545,21 @@
     <div class="inputs-row">
       <div>
         <label>Corriente Ib (A)</label>
-        <input type="number" id="aea_I" placeholder="Ej: 12,78" oninput="calcAea()">
+        <input type="text" inputmode="decimal" id="aea_I" placeholder="Ej: 12,78" oninput="calcAea()">
       </div>
       <div>
         <label>Longitud (m, un tramo)</label>
-        <input type="number" id="aea_L" placeholder="Ej: 35" oninput="calcAea()">
+        <input type="text" inputmode="decimal" id="aea_L" placeholder="Ej: 35" oninput="calcAea()">
       </div>
     </div>
     <div class="inputs-row">
       <div>
         <label>cos φ</label>
-        <input type="number" id="aea_cos" placeholder="1" value="1" step="0.01" oninput="calcAea()">
+        <input type="text" inputmode="decimal" id="aea_cos" placeholder="1" value="1" oninput="calcAea()">
       </div>
       <div>
         <label>Tensión nominal (V)</label>
-        <input type="number" id="aea_V" placeholder="220" value="220" oninput="calcAea()">
+        <input type="text" inputmode="decimal" id="aea_V" placeholder="220" value="220" oninput="calcAea()">
       </div>
     </div>
 
@@ -802,7 +802,7 @@
     row.innerHTML = '';
     currentCombo.vars.forEach(([varName]) => {
       const div = document.createElement('div');
-      div.innerHTML = `<label>${varName} (${UNIT_NAMES[varName]})</label><input type="number" id="in_${varName}" placeholder="Ej: 0" oninput="tryCalc()">`;
+      div.innerHTML = `<label>${varName} (${UNIT_NAMES[varName]})</label><input type="text" inputmode="decimal" id="in_${varName}" placeholder="Ej: 0" oninput="tryCalc()">`;
       row.appendChild(div);
     });
     document.getElementById('formulaTag').textContent = 'Fórmula: ' + currentCombo.formula;
@@ -810,8 +810,8 @@
 
   function tryCalc() {
     const [v1, v2] = currentCombo.vars.map(v => v[0]);
-    const a = parseFloat(document.getElementById('in_' + v1).value);
-    const b = parseFloat(document.getElementById('in_' + v2).value);
+    const a = parseNum(document.getElementById('in_' + v1).value);
+    const b = parseNum(document.getElementById('in_' + v2).value);
     if (isNaN(a) || isNaN(b)) { document.getElementById('resultBox').classList.add('hidden'); return; }
 
     const result = currentCombo.calc(a, b);
@@ -865,10 +865,10 @@
   }
 
   function calcDrop() {
-    const I = parseFloat(document.getElementById('drop_I').value);
-    const L = parseFloat(document.getElementById('drop_L').value);
+    const I = parseNum(document.getElementById('drop_I').value);
+    const L = parseNum(document.getElementById('drop_L').value);
     const S = parseFloat(document.getElementById('drop_S').value);
-    const Vn = parseFloat(document.getElementById('drop_V').value);
+    const Vn = parseNum(document.getElementById('drop_V').value);
 
     if (isNaN(I) || isNaN(L) || isNaN(S) || isNaN(Vn) || Vn === 0) {
       document.getElementById('dropResultBox').classList.add('hidden');
@@ -935,10 +935,10 @@
   }
 
   function calcAea() {
-    const Ib = parseFloat(document.getElementById('aea_I').value);
-    const L = parseFloat(document.getElementById('aea_L').value);
-    const cosPhi = parseFloat(document.getElementById('aea_cos').value);
-    const Vn = parseFloat(document.getElementById('aea_V').value);
+    const Ib = parseNum(document.getElementById('aea_I').value);
+    const L = parseNum(document.getElementById('aea_L').value);
+    const cosPhi = parseNum(document.getElementById('aea_cos').value);
+    const Vn = parseNum(document.getElementById('aea_V').value);
 
     if (isNaN(Ib) || isNaN(L) || isNaN(cosPhi) || isNaN(Vn) || Vn === 0) {
       document.getElementById('aeaResultBox').classList.add('hidden');
