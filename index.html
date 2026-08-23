@@ -1435,6 +1435,85 @@
     doc.setTextColor(30, 30, 30);
   }
 
+  // Tabla de circuitos: primera columna fija (DPMS, Ib, In, Sección, ΔV),
+  // una columna por cada circuito con su nombre como encabezado
+  function pdfTablaCircuitos(doc, y, circuitosList) {
+    const labelColW = 30;
+    const availableW = 182 - labelColW;
+    const maxColsPerBlock = 5;
+    const rowLabels = ['Circuito', 'DPMS (VA)', 'Ib (A)', 'In (A)', 'Sección (mm²)', 'ΔV (%)'];
+    const rowH = 7;
+    let huboExcedido = false;
+
+    for (let start = 0; start < circuitosList.length; start += maxColsPerBlock) {
+      const chunk = circuitosList.slice(start, start + maxColsPerBlock);
+      const colW = availableW / chunk.length;
+      const tableH = rowH * rowLabels.length;
+
+      if (y + tableH > 270) { doc.addPage(); y = 18; }
+      const curY = y;
+
+      const valores = chunk.map(c => {
+        const dpms = c.metodo === 'formula' ? (60*0.66*(parseNum(c.bocas)||0)) : ((parseNum(c.watts)||0)/0.95);
+        const Ib = dpms/220;
+        const inUsado = c.In || inSugerido(Ib);
+        const secUsada = c.seccion || seccionSugerida(inUsado);
+        let dv = '—';
+        const L = parseNum(c.longitud);
+        if (!isNaN(L) && L > 0) {
+          const dvVal = CAIDA_TABLE[secUsada] * (Ib*0.66) * (L*2) / 1000;
+          const pct = (dvVal/220)*100;
+          const excede = pct > 3;
+          if (excede) huboExcedido = true;
+          dv = pct.toFixed(1) + (excede ? '*' : '');
+        }
+        return { nombre: c.nombre, dpms: dpms.toFixed(0), ib: Ib.toFixed(2), in: inUsado + 'A', sec: secUsada + 'mm²', dv };
+      });
+
+      doc.setDrawColor(0, 169, 174); doc.setLineWidth(0.3);
+      doc.setFontSize(8);
+
+      rowLabels.forEach((label, ri) => {
+        const rowY = curY + ri * rowH;
+        doc.setFont(undefined, ri === 0 ? 'bold' : 'normal');
+        doc.setTextColor(ri === 0 ? 214 : 30, ri === 0 ? 36 : 30, ri === 0 ? 26 : 30);
+        doc.text(label, 15, rowY + 5);
+
+        valores.forEach((v, ci) => {
+          const cellX = 14 + labelColW + ci * colW;
+          const campos = [v.nombre, v.dpms, v.ib, v.in, v.sec, v.dv];
+          doc.setFont(undefined, ri === 0 ? 'bold' : 'normal');
+          doc.setTextColor(30, 30, 30);
+          doc.text(String(campos[ri]), cellX + 2, rowY + 5, { maxWidth: colW - 4 });
+        });
+      });
+
+      // líneas horizontales
+      for (let ri = 0; ri <= rowLabels.length; ri++) {
+        const lineY = curY + ri * rowH;
+        doc.line(14, lineY, 14 + labelColW + colW * chunk.length, lineY);
+      }
+      // líneas verticales
+      const tableBottom = curY + rowH * rowLabels.length;
+      doc.line(14, curY, 14, tableBottom);
+      doc.line(14 + labelColW, curY, 14 + labelColW, tableBottom);
+      for (let ci = 1; ci <= chunk.length; ci++) {
+        const lineX = 14 + labelColW + ci * colW;
+        doc.line(lineX, curY, lineX, tableBottom);
+      }
+
+      y = tableBottom + 6;
+    }
+
+    doc.setFont(undefined, 'normal'); doc.setTextColor(30, 30, 30);
+    if (huboExcedido) {
+      doc.setFontSize(7.5); doc.setTextColor(214, 36, 26);
+      doc.text('* Caída de tensión supera el 3% recomendado', 14, y); y += 5;
+      doc.setTextColor(30, 30, 30);
+    }
+    return y;
+  }
+
   /* ============ GENERAR PDF Y COMPARTIR ============ */
   function generarPDFTablero() {
     const msg = document.getElementById('pdfMsg');
@@ -1461,24 +1540,12 @@
     y = pdfSectionTitle(doc, 'Circuitos', y);
 
     let totalDPMS = 0;
-    circuitos.forEach((c, i) => {
+    circuitos.forEach(c => {
       const dpms = c.metodo === 'formula' ? (60*0.66*(parseNum(c.bocas)||0)) : ((parseNum(c.watts)||0)/0.95);
       totalDPMS += dpms;
-      const Ib = dpms/220;
-      const inUsado = c.In || inSugerido(Ib);
-      const secUsada = c.seccion || seccionSugerida(inUsado);
-      let linea = `${i+1}. ${c.nombre} — DPMS ${dpms.toFixed(0)}VA · Ib ${Ib.toFixed(2)}A · In ${inUsado}A · Sección ${secUsada}mm²`;
-      const L = parseNum(c.longitud);
-      if (!isNaN(L) && L > 0) {
-        const dv = CAIDA_TABLE[secUsada] * (Ib*0.66) * (L*2) / 1000;
-        const pct = (dv/220)*100;
-        linea += ` · ΔV ${dv.toFixed(1)}V (${pct.toFixed(1)}%)${pct>3?' [SUPERA 3%]':''}`;
-      }
-      const wrapped = doc.splitTextToSize(linea, 180);
-      doc.text(wrapped, 14, y);
-      y += wrapped.length * 4.5 + 1.5;
-      if (y > 270) { doc.addPage(); y = 18; }
     });
+
+    y = pdfTablaCircuitos(doc, y, circuitos);
 
     y += 4;
     y = pdfSectionTitle(doc, 'Protección general', y);
