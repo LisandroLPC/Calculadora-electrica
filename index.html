@@ -661,7 +661,12 @@
       <div class="step-label">Esquema del tablero</div>
       <div id="esquemaTablero"></div>
 
-      <button class="resetbtn" style="background:#00A9AE; color:#fff; border-color:#D6241A; margin-top:14px; font-weight:700;" onclick="generarPDFTablero()">📄 Generar PDF y compartir</button>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:14px; font-size:13px; color:#e4e4e7; cursor:pointer;">
+        <input type="checkbox" id="incluirCaidaCheck" style="width:auto; accent-color:#00A9AE;">
+        Incluir cálculo de Caída de Tensión de este proyecto
+      </label>
+
+      <button class="resetbtn" style="background:#00A9AE; color:#fff; border-color:#D6241A; margin-top:10px; font-weight:700;" onclick="generarPDFTablero()">📄 Generar PDF y compartir</button>
       <div class="proyectos-msg" id="pdfMsg" style="text-align:center;"></div>
 
       <div class="note">
@@ -1438,9 +1443,9 @@
   // Tabla de circuitos: primera columna fija (DPMS, Ib, In, Sección, ΔV),
   // una columna por cada circuito con su nombre como encabezado
   function pdfTablaCircuitos(doc, y, circuitosList) {
-    const labelColW = 30;
+    const labelColW = 26;
     const availableW = 182 - labelColW;
-    const maxColsPerBlock = 5;
+    const maxColsPerBlock = 8; // + 1 columna de etiqueta = 9 columnas totales
     const rowLabels = ['Circuito', 'DPMS (VA)', 'Ib (A)', 'In (A)', 'Sección (mm²)', 'ΔV (%)'];
     const rowH = 7;
     let huboExcedido = false;
@@ -1471,7 +1476,7 @@
       });
 
       doc.setDrawColor(0, 169, 174); doc.setLineWidth(0.3);
-      doc.setFontSize(8);
+      doc.setFontSize(7.3);
 
       rowLabels.forEach((label, ri) => {
         const rowY = curY + ri * rowH;
@@ -1569,6 +1574,11 @@
     doc.setFont(undefined, 'bold');
     doc.text(`Ib general: ${totalIb.toFixed(2)}A ${totalIb > itmIn ? '(⚠ el ITM elegido queda corto)' : '(OK)'}`, 14, y); y += 8;
     doc.setFont(undefined, 'normal');
+
+    if (document.getElementById('incluirCaidaCheck').checked) {
+      doc.addPage(); y = 18;
+      y = construirSeccionCaida(doc, y);
+    }
 
     pdfFooter(doc);
 
@@ -1704,6 +1714,18 @@
     doc.text(`Cliente / Proyecto: ${cliente}`, 14, y); y += 5;
     doc.text(`Fecha: ${new Date().toLocaleDateString('es-AR')}`, 14, y); y += 9;
 
+    y = construirSeccionCaida(doc, y);
+
+    pdfFooter(doc);
+
+    const filename = `${cliente.replace(/[^a-zA-Z0-9]+/g, '_')}_caida_tension.pdf`;
+    const blob = doc.output('blob');
+    compartirPDF(blob, filename, msg);
+  }
+
+  // Contenido de Caída de Tensión (sin header/footer), reutilizable
+  // desde el comprobante propio y desde el PDF del Tablero
+  function construirSeccionCaida(doc, y) {
     const usandoInsitu = document.getElementById('sub-insitu').classList.contains('active');
 
     if (usandoInsitu) {
@@ -1712,7 +1734,7 @@
       const S = parseFloat(document.getElementById('drop_S').value);
       const Vn = parseNum(document.getElementById('drop_V').value);
 
-      y = pdfSectionTitle(doc, 'Datos de la medición (in situ)', y);
+      y = pdfSectionTitle(doc, 'Caída de Tensión — Datos de la medición (in situ)', y);
       doc.text(`Método: Medición directa en obra`, 14, y); y += 5;
       doc.text(`Sistema: ${dropSystem === 'mono' ? 'Monofásico 220V' : 'Trifásico 380V'}`, 14, y); y += 5;
       doc.text(`Material del conductor: ${dropMaterial === 'cu' ? 'Cobre' : 'Aluminio'}`, 14, y); y += 5;
@@ -1747,7 +1769,7 @@
       const cosPhi = parseNum(document.getElementById('aea_cos').value);
       const Vn = parseNum(document.getElementById('aea_V').value);
 
-      y = pdfSectionTitle(doc, 'Datos del cálculo (Tabla AEA / IRAM-NM 247-3)', y);
+      y = pdfSectionTitle(doc, 'Caída de Tensión — Tabla AEA / IRAM-NM 247-3', y);
       doc.text(`Modo: ${aeaMode === 'verif' ? 'Verificación de sección elegida' : 'Cálculo de sección mínima'}`, 14, y); y += 5;
       doc.text(`Corriente Ib: ${isNaN(Ib) ? '—' : Ib} A`, 14, y); y += 5;
       doc.text(`Longitud del tramo: ${isNaN(L) ? '—' : L} m`, 14, y); y += 5;
@@ -1789,12 +1811,7 @@
         doc.text('(Faltan datos para calcular el resultado)', 14, y); y += 5;
       }
     }
-
-    pdfFooter(doc);
-
-    const filename = `${cliente.replace(/[^a-zA-Z0-9]+/g, '_')}_caida_tension.pdf`;
-    const blob = doc.output('blob');
-    compartirPDF(blob, filename, msg);
+    return y;
   }
 </script>
 </body>
