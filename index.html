@@ -397,9 +397,13 @@
           <div class="icon">⚡</div>
           <div><div class="txt-title">Caída de Tensión</div><div class="txt-sub">In situ o tabla AEA</div></div>
         </div>
-        <div class="home-card wide" onclick="showApp('panel')">
+        <div class="home-card" onclick="showApp('panel')">
           <div class="icon">🗄️</div>
           <div><div class="txt-title">Tablero</div><div class="txt-sub">Dimensionar o verificar</div></div>
+        </div>
+        <div class="home-card" onclick="showApp('budget')">
+          <div class="icon">🧾</div>
+          <div><div class="txt-title">Presupuesto</div><div class="txt-sub">Generar PDF para el cliente</div></div>
         </div>
       </div>
     </div>
@@ -413,6 +417,7 @@
     <button class="tab-btn active" id="tabBtnOhm" onclick="switchTab('ohm')">Ohm</button>
     <button class="tab-btn" id="tabBtnDrop" onclick="switchTab('drop')">Caída V.</button>
     <button class="tab-btn" id="tabBtnPanel" onclick="switchTab('panel')">Tablero</button>
+    <button class="tab-btn" id="tabBtnBudget" onclick="switchTab('budget')">Presup.</button>
   </div>
 
   <!-- ===================== TAB LEY DE OHM ===================== -->
@@ -689,6 +694,80 @@
 
   </div>
 
+  <!-- ===================== TAB PRESUPUESTO ===================== -->
+  <div class="tab-content" id="tab-budget">
+    <h2>🧾 Presupuesto</h2>
+    <p class="sub">Cargá los datos y generá el PDF formal para el cliente.</p>
+
+    <div class="step-label" style="margin-top:0;">N° y fechas</div>
+    <div class="inputs-row">
+      <div>
+        <label>N° de presupuesto</label>
+        <input type="text" id="pr_numero" placeholder="001-000011" value="">
+      </div>
+      <div>
+        <label>Validez (días)</label>
+        <input type="text" inputmode="decimal" id="pr_validez" value="20" oninput="actualizarVencimientoPresupuesto()">
+      </div>
+    </div>
+    <div class="formula-tag" id="pr_fechasTag">Fecha: — · Vencimiento: —</div>
+
+    <div class="step-label">Cliente</div>
+    <div class="inputs-row">
+      <div><label>Nombre</label><input type="text" id="pr_clienteNombre" placeholder="Ej: Juan Pérez"></div>
+      <div><label>Teléfono</label><input type="text" id="pr_clienteTel" placeholder="Opcional"></div>
+    </div>
+    <div class="inputs-row">
+      <div><label>Email</label><input type="text" id="pr_clienteEmail" placeholder="Opcional"></div>
+    </div>
+
+    <div class="step-label">Datos impositivos (opcional, para factura)</div>
+    <div class="inputs-row">
+      <div><label>CUIT / CUIL</label><input type="text" id="pr_cuit" placeholder="Opcional"></div>
+      <div><label>Razón social</label><input type="text" id="pr_razonSocial" placeholder="Opcional"></div>
+    </div>
+    <div class="inputs-row">
+      <div><label>Domicilio</label><input type="text" id="pr_domicilio" placeholder="Opcional"></div>
+    </div>
+
+    <div class="step-label">Ítems</div>
+    <div id="pr_itemsList"></div>
+    <button class="resetbtn" onclick="addPresupuestoItem()">+ Agregar ítem</button>
+
+    <div class="step-label">IVA</div>
+    <div class="inputs-row" style="align-items:center;">
+      <div style="flex:0 0 auto;">
+        <label style="display:flex; align-items:center; gap:8px; margin-top:6px; cursor:pointer;">
+          <input type="checkbox" id="pr_incluirIva" style="width:auto; accent-color:#00A9AE;" onchange="calcularTotalesPresupuesto()">
+          Facturar con IVA
+        </label>
+      </div>
+      <div style="max-width:110px;">
+        <label>% IVA</label>
+        <input type="text" inputmode="decimal" id="pr_pctIva" value="21" oninput="calcularTotalesPresupuesto()">
+      </div>
+    </div>
+
+    <div class="result" id="pr_totalesBox">
+      <div class="formula-used" id="pr_totalesDetalle" style="font-size:13px;"></div>
+    </div>
+
+    <div class="step-label">Condiciones de pago</div>
+    <textarea id="pr_condiciones" rows="4" style="width:100%; padding:11px 10px; border:1px solid #3f3f46; border-radius:8px; background:#201f21; color:#f4f4f5; font-size:13px; font-family:inherit;">El trabajo se confirma con una seña del 50% del monto total. El saldo restante deberá abonarse al finalizar la obra, contra entrega y verificación del servicio. Los precios cotizados se mantienen por 15 días y no incluyen materiales adicionales o modificaciones solicitadas posteriormente.</textarea>
+
+    <div class="step-label">Otros detalles</div>
+    <textarea id="pr_otrosDetalles" rows="4" style="width:100%; padding:11px 10px; border:1px solid #3f3f46; border-radius:8px; background:#201f21; color:#f4f4f5; font-size:13px; font-family:inherit;">Cualquier modificación fuera de lo presupuestado podrá ajustar el costo final. No se incluyen tareas de albañilería o pintura fuera de lo indicado. El trabajo se realizará con los materiales especificados anteriormente.</textarea>
+
+    <div class="step-label">Contacto (pie del PDF)</div>
+    <div class="inputs-row">
+      <div><label>WhatsApp</label><input type="text" id="pr_whatsapp" placeholder="Ej: 11-1234-5678"></div>
+      <div><label>Instagram</label><input type="text" id="pr_instagram" placeholder="Ej: tu.usuario"></div>
+    </div>
+
+    <button class="resetbtn" style="background:#00A9AE; color:#fff; border-color:#D6241A; margin-top:14px; font-weight:700;" onclick="generarPDFPresupuesto()">📄 Generar presupuesto PDF y compartir</button>
+    <div class="proyectos-msg" id="pr_pdfMsg" style="text-align:center;"></div>
+  </div>
+
   </div> <!-- cierre screen-app -->
 
 </div>
@@ -711,9 +790,11 @@
     document.getElementById('tab-ohm').classList.toggle('active', tab === 'ohm');
     document.getElementById('tab-drop').classList.toggle('active', tab === 'drop');
     document.getElementById('tab-panel').classList.toggle('active', tab === 'panel');
+    document.getElementById('tab-budget').classList.toggle('active', tab === 'budget');
     document.getElementById('tabBtnOhm').classList.toggle('active', tab === 'ohm');
     document.getElementById('tabBtnDrop').classList.toggle('active', tab === 'drop');
     document.getElementById('tabBtnPanel').classList.toggle('active', tab === 'panel');
+    document.getElementById('tabBtnBudget').classList.toggle('active', tab === 'budget');
   }
 
   function switchSubTab(sub) {
@@ -1813,6 +1894,256 @@
     }
     return y;
   }
+
+  /* ============ PRESUPUESTO ============ */
+  const PR_CONTADOR_KEY = 'calc_electrica_presupuesto_contador';
+
+  function siguienteNumeroPresupuesto() {
+    const n = parseInt(localStorage.getItem(PR_CONTADOR_KEY) || '1');
+    return '001-' + String(n).padStart(6, '0');
+  }
+  function incrementarContadorPresupuesto() {
+    const n = parseInt(localStorage.getItem(PR_CONTADOR_KEY) || '1');
+    localStorage.setItem(PR_CONTADOR_KEY, String(n + 1));
+  }
+
+  let prItems = [];
+  let prItemId = 0;
+
+  function addPresupuestoItem() {
+    prItems.push({ id: prItemId++, descripcion: '', precio: '', cantidad: '1' });
+    renderPresupuestoItems();
+  }
+  function removePresupuestoItem(id) {
+    prItems = prItems.filter(i => i.id !== id);
+    renderPresupuestoItems();
+  }
+  function updatePresupuestoItem(id, field, value) {
+    const it = prItems.find(i => i.id === id);
+    if (!it) return;
+    it[field] = value;
+    rerenderPreserving('pr_itemsList', renderPresupuestoItems);
+  }
+
+  function formatMoneyAR(n) {
+    return '$ ' + Math.round(n || 0).toLocaleString('es-AR');
+  }
+
+  function renderPresupuestoItems() {
+    const cont = document.getElementById('pr_itemsList');
+    cont.innerHTML = prItems.map(it => {
+      const precio = parseNum(it.precio) || 0;
+      const cant = parseNum(it.cantidad) || 0;
+      const total = precio * cant;
+      return `
+      <div style="border:1px solid #3f3f46; border-radius:10px; padding:10px; margin-bottom:8px; background:#201f21;">
+        <label>Descripción</label>
+        <input type="text" id="pri_desc_${it.id}" value="${it.descripcion}" placeholder="Ej: Armado de tablero seccional" oninput="updatePresupuestoItem(${it.id},'descripcion',this.value)">
+        <div class="inputs-row">
+          <div><label>Precio unitario</label><input type="text" inputmode="decimal" id="pri_precio_${it.id}" value="${it.precio}" placeholder="0" oninput="updatePresupuestoItem(${it.id},'precio',this.value)"></div>
+          <div><label>Cantidad</label><input type="text" inputmode="decimal" id="pri_cant_${it.id}" value="${it.cantidad}" placeholder="1" oninput="updatePresupuestoItem(${it.id},'cantidad',this.value)"></div>
+        </div>
+        <div class="formula-tag" style="margin-top:8px;">Subtotal ítem: ${formatMoneyAR(total)}</div>
+        <button class="resetbtn" style="margin-top:8px; color:#f87171;" onclick="removePresupuestoItem(${it.id})">Quitar ítem</button>
+      </div>`;
+    }).join('');
+    calcularTotalesPresupuesto();
+  }
+
+  function calcularTotalesPresupuesto() {
+    const subtotal = prItems.reduce((acc, it) => acc + (parseNum(it.precio) || 0) * (parseNum(it.cantidad) || 0), 0);
+    const incluirIva = document.getElementById('pr_incluirIva').checked;
+    const pctIva = parseNum(document.getElementById('pr_pctIva').value) || 0;
+    const iva = incluirIva ? subtotal * pctIva / 100 : 0;
+    const total = subtotal + iva;
+    document.getElementById('pr_totalesDetalle').innerHTML =
+      `Subtotal: <b>${formatMoneyAR(subtotal)}</b><br>` +
+      `I.V.A (${incluirIva ? pctIva + '%' : '0%'}): <b>${formatMoneyAR(iva)}</b><br>` +
+      `<span style="font-size:16px; color:#00C7CD;">TOTAL: <b>${formatMoneyAR(total)}</b></span>`;
+    return { subtotal, iva, total };
+  }
+
+  function actualizarVencimientoPresupuesto() {
+    const validez = parseInt(parseNum(document.getElementById('pr_validez').value)) || 0;
+    const hoy = new Date();
+    const venc = new Date(hoy.getTime() + validez * 24 * 60 * 60 * 1000);
+    const fmt = d => d.toLocaleDateString('es-AR');
+    document.getElementById('pr_fechasTag').textContent = `Fecha: ${fmt(hoy)} · Vencimiento: ${fmt(venc)}`;
+    return { fecha: fmt(hoy), vencimiento: fmt(venc) };
+  }
+
+  function generarPDFPresupuesto() {
+    const msg = document.getElementById('pr_pdfMsg');
+    if (typeof window.jspdf === 'undefined') {
+      msg.style.color = '#f87171';
+      msg.textContent = 'No se pudo cargar el generador de PDF — revisá tu conexión a internet.';
+      return;
+    }
+    if (prItems.length === 0) {
+      msg.style.color = '#f87171';
+      msg.textContent = 'Agregá al menos un ítem antes de generar el presupuesto.';
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const { fecha, vencimiento } = actualizarVencimientoPresupuesto();
+    const { subtotal, iva, total } = calcularTotalesPresupuesto();
+    const incluirIva = document.getElementById('pr_incluirIva').checked;
+    const pctIva = parseNum(document.getElementById('pr_pctIva').value) || 0;
+    const numero = document.getElementById('pr_numero').value || '';
+    const clienteNombre = document.getElementById('pr_clienteNombre').value || '—';
+    const clienteTel = document.getElementById('pr_clienteTel').value || '';
+    const clienteEmail = document.getElementById('pr_clienteEmail').value || '';
+    const cuit = document.getElementById('pr_cuit').value || '';
+    const razonSocial = document.getElementById('pr_razonSocial').value || '';
+    const domicilio = document.getElementById('pr_domicilio').value || '';
+    const condiciones = document.getElementById('pr_condiciones').value || '';
+    const otrosDetalles = document.getElementById('pr_otrosDetalles').value || '';
+    const whatsapp = document.getElementById('pr_whatsapp').value || '—';
+    const instagram = document.getElementById('pr_instagram').value || '—';
+
+    // --- Logo ---
+    try {
+      const logoImg = document.querySelector('.logo-box-img');
+      if (logoImg && logoImg.src) doc.addImage(logoImg.src, 'PNG', 14, 10, 32, 32);
+    } catch(e) {}
+
+    // --- Banner PRESUPUESTO ---
+    doc.setFillColor(214, 36, 26);
+    doc.roundedRect(95, 12, 101, 20, 3, 3, 'F');
+    doc.setFont(undefined, 'bold'); doc.setFontSize(20); doc.setTextColor(255, 255, 255);
+    doc.text('PRESUPUESTO', 145, 25, { align: 'center' });
+
+    doc.setFontSize(10); doc.setTextColor(30, 30, 30); doc.setFont(undefined, 'bold');
+    doc.text(`N° ${numero}`, 196, 40, { align: 'right' });
+    doc.setFont(undefined, 'normal'); doc.setFontSize(9);
+    doc.text(`Fecha: ${fecha}`, 196, 46, { align: 'right' });
+    doc.text(`Vencimiento: ${vencimiento}`, 196, 51, { align: 'right' });
+
+    // --- Cliente ---
+    let y = 52;
+    doc.setFontSize(9); doc.setTextColor(214, 36, 26); doc.setFont(undefined, 'bold');
+    doc.text('CLIENTE', 14, y);
+    doc.setFontSize(14); doc.setTextColor(30, 30, 30);
+    doc.text(clienteNombre, 14, y + 7);
+
+    doc.setFontSize(8); doc.setTextColor(30, 30, 30); doc.setFont(undefined, 'normal');
+    doc.setFillColor(235, 235, 235);
+    doc.rect(14, y + 12, 88, 7, 'F');
+    doc.text(`Teléfono: ${clienteTel}`, 16, y + 16.5);
+    doc.rect(14, y + 20, 88, 7, 'F');
+    doc.text(`Email: ${clienteEmail}`, 16, y + 24.5);
+
+    // --- Datos impositivos ---
+    doc.setFontSize(9); doc.setTextColor(214, 36, 26); doc.setFont(undefined, 'bold');
+    doc.text('DATOS IMPOSITIVOS', 110, y);
+    doc.setFontSize(8); doc.setTextColor(30, 30, 30); doc.setFont(undefined, 'normal');
+    doc.setFillColor(235, 235, 235);
+    doc.rect(110, y + 4, 86, 7, 'F');
+    doc.text(`Cuit-Cuil: ${cuit}`, 112, y + 8.5);
+    doc.rect(110, y + 12, 86, 7, 'F');
+    doc.text(`Razón Social: ${razonSocial}`, 112, y + 16.5);
+    doc.rect(110, y + 20, 86, 7, 'F');
+    doc.text(`Domicilio: ${domicilio}`, 112, y + 24.5);
+
+    // --- Tabla de ítems ---
+    y += 34;
+    doc.setFillColor(30, 30, 32);
+    doc.rect(14, y, 182, 8, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFontSize(8); doc.setFont(undefined, 'bold');
+    doc.text('DESCRIPCIÓN', 16, y + 5.5);
+    doc.text('PRECIO', 128, y + 5.5, { align: 'center' });
+    doc.text('CANTIDAD', 155, y + 5.5, { align: 'center' });
+    doc.text('TOTAL', 186, y + 5.5, { align: 'center' });
+    y += 8;
+
+    doc.setFont(undefined, 'normal'); doc.setTextColor(30, 30, 30);
+    const filasMinimas = Math.max(prItems.length, 4);
+    for (let i = 0; i < filasMinimas; i++) {
+      const it = prItems[i];
+      const precio = it ? (parseNum(it.precio) || 0) : 0;
+      const cant = it ? (parseNum(it.cantidad) || 0) : 0;
+      const totalItem = precio * cant;
+      const descLines = it ? doc.splitTextToSize(it.descripcion || '', 105) : [''];
+      const rowH = Math.max(10, descLines.length * 4.5 + 4);
+
+      if (y + rowH > 265) { doc.addPage(); y = 18; }
+
+      if (i % 2 === 0) { doc.setFillColor(240, 240, 240); doc.rect(14, y, 182, rowH, 'F'); }
+
+      doc.setFontSize(8);
+      if (it) {
+        doc.text(descLines, 16, y + 5);
+        doc.text(formatMoneyAR(precio), 128, y + rowH/2 + 1.5, { align: 'center' });
+        doc.text(String(cant || ''), 155, y + rowH/2 + 1.5, { align: 'center' });
+        doc.setFont(undefined, 'bold');
+        doc.text(formatMoneyAR(totalItem), 186, y + rowH/2 + 1.5, { align: 'center' });
+        doc.setFont(undefined, 'normal');
+      }
+      y += rowH;
+    }
+
+    // --- Totales ---
+    y += 6;
+    if (y > 250) { doc.addPage(); y = 18; }
+    const totX = 130, totW = 66;
+    doc.setDrawColor(180, 180, 180); doc.setLineWidth(0.3);
+    doc.line(totX, y, totX + totW, y);
+    doc.setFontSize(9); doc.setFont(undefined, 'bold'); doc.setTextColor(30, 30, 30);
+    doc.text('Subtotal', totX + 2, y + 6);
+    doc.text(formatMoneyAR(subtotal), totX + totW - 2, y + 6, { align: 'right' });
+    y += 10;
+    doc.setFont(undefined, 'normal');
+    doc.text(`I.V.A ${incluirIva ? pctIva + '%' : ''}`, totX + 2, y + 4);
+    doc.text(formatMoneyAR(iva), totX + totW - 2, y + 4, { align: 'right' });
+    y += 8;
+    doc.setFillColor(30, 30, 32);
+    doc.rect(totX, y, totW, 9, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFont(undefined, 'bold'); doc.setFontSize(11);
+    doc.text('TOTAL', totX + 3, y + 6);
+    doc.text(formatMoneyAR(total), totX + totW - 3, y + 6, { align: 'right' });
+    y += 16;
+
+    // --- Condiciones y otros detalles ---
+    if (y > 235) { doc.addPage(); y = 18; }
+    const yCond = y;
+    doc.setFontSize(9); doc.setTextColor(214, 36, 26); doc.setFont(undefined, 'bold');
+    doc.text('CONDICIONES DE PAGO', 14, yCond);
+    doc.setFontSize(7.5); doc.setTextColor(60, 60, 60); doc.setFont(undefined, 'normal');
+    const condLines = doc.splitTextToSize(condiciones, 85);
+    doc.text(condLines, 14, yCond + 5);
+
+    doc.setFontSize(9); doc.setTextColor(214, 36, 26); doc.setFont(undefined, 'bold');
+    doc.text('OTROS DETALLES', 110, yCond);
+    doc.setFontSize(7.5); doc.setTextColor(60, 60, 60); doc.setFont(undefined, 'normal');
+    const otrosLines = doc.splitTextToSize(otrosDetalles, 86);
+    doc.text(otrosLines, 110, yCond + 5);
+
+    const yFirma = yCond + Math.max(condLines.length, otrosLines.length) * 3.6 + 14;
+    doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.3);
+    doc.line(140, yFirma, 196, yFirma);
+    doc.setFontSize(7.5); doc.setTextColor(100, 100, 100);
+    doc.text('FIRMA CLIENTE', 168, yFirma + 4, { align: 'center' });
+
+    // --- Pie con contacto ---
+    doc.setFillColor(20, 20, 22);
+    doc.rect(0, 284, 210, 13, 'F');
+    doc.setFontSize(9); doc.setTextColor(255, 255, 255); doc.setFont(undefined, 'bold');
+    doc.text(`WhatsApp: ${whatsapp}`, 14, 292);
+    doc.text(`Instagram: ${instagram}`, 196, 292, { align: 'right' });
+
+    const filename = `Presupuesto_${clienteNombre.replace(/[^a-zA-Z0-9]+/g, '_') || 'sin_nombre'}.pdf`;
+    const blob = doc.output('blob');
+    compartirPDF(blob, filename, msg);
+
+    incrementarContadorPresupuesto();
+    document.getElementById('pr_numero').value = siguienteNumeroPresupuesto();
+  }
+
+  addPresupuestoItem();
+  actualizarVencimientoPresupuesto();
+  document.getElementById('pr_numero').value = siguienteNumeroPresupuesto();
 </script>
 </body>
 </html>
