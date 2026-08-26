@@ -440,7 +440,7 @@
   <!-- ===================== AUTENTICACIÓN ===================== -->
   <div id="screen-auth">
     <div class="auth-wrap">
-      <img class="logo-box-img" src="" id="authLogoImg" alt="Logo" style="width:100px;height:100px;">
+      <div style="width:80px; height:80px; border-radius:50%; background:#201f21; border:2px solid #D6241A; display:flex; align-items:center; justify-content:center; font-size:36px;">⚡</div>
       <div class="home-title" id="authTitle">Iniciar sesión</div>
       <p class="home-sub">Accedé a tu calculadora eléctrica</p>
 
@@ -2484,10 +2484,6 @@
   actualizarVencimientoPresupuesto();
   document.getElementById('pr_numero').value = siguienteNumeroPresupuesto();
   refrescarListaPresupuestos();
-
-  // Copiamos el logo ya embebido en la carátula a la pantalla de login
-  const logoHome = document.querySelector('#screen-home .logo-box-img');
-  if (logoHome) document.getElementById('authLogoImg').src = logoHome.src;
 
   verificarSesionInicial();
 </script>
