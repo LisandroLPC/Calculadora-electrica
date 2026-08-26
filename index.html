@@ -2017,9 +2017,9 @@
     const whatsapp = document.getElementById('pr_whatsapp').value || '';
     const instagram = document.getElementById('pr_instagram').value || '';
 
-    // Dibuja "Etiqueta: valor" solo si hay valor cargado; si no, deja el renglón sin texto
+    // Dibuja siempre "Etiqueta:" (el valor queda vacío si no fue cargado, pero la etiqueta se ve igual)
     function textoSiHay(campo, valor, x, yPos) {
-      if (valor && valor.trim() !== '') doc.text(`${campo}: ${valor}`, x, yPos);
+      doc.text(`${campo}: ${valor || ''}`, x, yPos);
     }
 
     // --- Logo ---
@@ -2101,7 +2101,7 @@
 
     filasReales.forEach(f => {
       if (!entraEnLayoutFijo && y + f.rowH > 265) { doc.addPage(); y = 18; }
-      if (idxFila % 2 === 0) { doc.setFillColor(240, 240, 240); doc.rect(14, y, 182, f.rowH, 'F'); }
+      if (idxFila % 2 === 1) { doc.setFillColor(240, 240, 240); doc.rect(14, y, 182, f.rowH, 'F'); }
       doc.setFontSize(8);
       doc.text(f.descLines, 16, y + 5);
       doc.text(formatMoneyAR(f.precio), 128, y + f.rowH/2 + 1.5, { align: 'center' });
@@ -2117,12 +2117,12 @@
       // Rellenamos el espacio restante con renglones vacíos sombreados hasta ITEMS_BOTTOM
       const FILLER_H = 9;
       while (y + FILLER_H <= ITEMS_BOTTOM) {
-        if (idxFila % 2 === 0) { doc.setFillColor(240, 240, 240); doc.rect(14, y, 182, FILLER_H, 'F'); }
+        if (idxFila % 2 === 1) { doc.setFillColor(240, 240, 240); doc.rect(14, y, 182, FILLER_H, 'F'); }
         y += FILLER_H;
         idxFila++;
       }
       if (ITEMS_BOTTOM - y > 0) {
-        if (idxFila % 2 === 0) { doc.setFillColor(240, 240, 240); doc.rect(14, y, 182, ITEMS_BOTTOM - y, 'F'); }
+        if (idxFila % 2 === 1) { doc.setFillColor(240, 240, 240); doc.rect(14, y, 182, ITEMS_BOTTOM - y, 'F'); }
         y = ITEMS_BOTTOM;
       }
     }
