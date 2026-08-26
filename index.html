@@ -699,6 +699,20 @@
     <h2>🧾 Presupuesto</h2>
     <p class="sub">Cargá los datos y generá el PDF formal para el cliente.</p>
 
+    <div class="proyectos-bar">
+      <div class="step-label" style="margin-top:0;">Presupuestos guardados</div>
+      <div class="proyectos-row">
+        <select id="pr_lista"><option value="">— Presupuestos guardados —</option></select>
+        <button onclick="cargarPresupuestoGuardado()">Cargar</button>
+        <button class="danger" onclick="eliminarPresupuestoGuardado()">✕</button>
+      </div>
+      <div class="proyectos-row" style="margin-top:6px;">
+        <button onclick="guardarPresupuestoActual()">💾 Guardar</button>
+        <button onclick="nuevoPresupuesto()">+ Nuevo presupuesto</button>
+      </div>
+      <div class="proyectos-msg" id="pr_listaMsg"></div>
+    </div>
+
     <div class="step-label" style="margin-top:0;">N° y fechas</div>
     <div class="inputs-row">
       <div>
@@ -2168,13 +2182,137 @@
     const blob = doc.output('blob');
     compartirPDF(blob, filename, msg);
 
-    incrementarContadorPresupuesto();
+    // Al emitir el PDF, queda archivado automáticamente por su número
+    guardarPresupuestoActual(true);
+  }
+
+  /* ============ GUARDADO DE PRESUPUESTOS (localStorage) ============ */
+  const PR_STORE_KEY = 'calc_electrica_presupuestos_v1';
+
+  function getPresupuestosGuardados() {
+    try { return JSON.parse(localStorage.getItem(PR_STORE_KEY) || '{}'); }
+    catch(e) { return {}; }
+  }
+  function setPresupuestosGuardados(obj) {
+    localStorage.setItem(PR_STORE_KEY, JSON.stringify(obj));
+  }
+  function refrescarListaPresupuestos() {
+    const guardados = getPresupuestosGuardados();
+    const sel = document.getElementById('pr_lista');
+    const numeros = Object.keys(guardados).sort();
+    sel.innerHTML = '<option value="">— Presupuestos guardados —</option>' +
+      numeros.map(n => `<option value="${n}">${n} — ${guardados[n].clienteNombre || 'sin nombre'} (${guardados[n].savedAt || ''})</option>`).join('');
+  }
+  function mostrarMsgLista(txt, esError) {
+    const el = document.getElementById('pr_listaMsg');
+    el.textContent = txt;
+    el.style.color = esError ? '#f87171' : '#4ade80';
+    setTimeout(() => { el.textContent = ''; }, 3500);
+  }
+
+  function guardarPresupuestoActual(silencioso) {
+    const numero = document.getElementById('pr_numero').value.trim();
+    if (!numero) { if (!silencioso) mostrarMsgLista('Necesitás un número de presupuesto para guardar.', true); return; }
+
+    const datos = {
+      numero,
+      clienteNombre: document.getElementById('pr_clienteNombre').value,
+      clienteTel: document.getElementById('pr_clienteTel').value,
+      clienteEmail: document.getElementById('pr_clienteEmail').value,
+      cuit: document.getElementById('pr_cuit').value,
+      razonSocial: document.getElementById('pr_razonSocial').value,
+      domicilio: document.getElementById('pr_domicilio').value,
+      items: prItems.map(it => ({ descripcion: it.descripcion, precio: it.precio, cantidad: it.cantidad })),
+      incluirIva: document.getElementById('pr_incluirIva').checked,
+      pctIva: document.getElementById('pr_pctIva').value,
+      condiciones: document.getElementById('pr_condiciones').value,
+      otrosDetalles: document.getElementById('pr_otrosDetalles').value,
+      whatsapp: document.getElementById('pr_whatsapp').value,
+      instagram: document.getElementById('pr_instagram').value,
+      validez: document.getElementById('pr_validez').value,
+      savedAt: new Date().toLocaleDateString('es-AR')
+    };
+
+    const guardados = getPresupuestosGuardados();
+    guardados[numero] = datos;
+    setPresupuestosGuardados(guardados);
+    refrescarListaPresupuestos();
+    if (!silencioso) mostrarMsgLista(`Presupuesto ${numero} guardado ✓`, false);
+  }
+
+  function cargarPresupuestoGuardado() {
+    const numero = document.getElementById('pr_lista').value;
+    if (!numero) { mostrarMsgLista('Elegí un presupuesto de la lista.', true); return; }
+    const guardados = getPresupuestosGuardados();
+    const d = guardados[numero];
+    if (!d) { mostrarMsgLista('No se encontró ese presupuesto.', true); return; }
+
+    document.getElementById('pr_numero').value = d.numero;
+    document.getElementById('pr_clienteNombre').value = d.clienteNombre || '';
+    document.getElementById('pr_clienteTel').value = d.clienteTel || '';
+    document.getElementById('pr_clienteEmail').value = d.clienteEmail || '';
+    document.getElementById('pr_cuit').value = d.cuit || '';
+    document.getElementById('pr_razonSocial').value = d.razonSocial || '';
+    document.getElementById('pr_domicilio').value = d.domicilio || '';
+    document.getElementById('pr_incluirIva').checked = !!d.incluirIva;
+    document.getElementById('pr_pctIva').value = d.pctIva || '21';
+    document.getElementById('pr_condiciones').value = d.condiciones || '';
+    document.getElementById('pr_otrosDetalles').value = d.otrosDetalles || '';
+    document.getElementById('pr_whatsapp').value = d.whatsapp || '';
+    document.getElementById('pr_instagram').value = d.instagram || '';
+    document.getElementById('pr_validez').value = d.validez || '20';
+
+    prItems = (d.items || []).map(it => ({ id: prItemId++, descripcion: it.descripcion, precio: it.precio, cantidad: it.cantidad }));
+    if (prItems.length === 0) prItems.push({ id: prItemId++, descripcion: '', precio: '', cantidad: '1' });
+    renderPresupuestoItems();
+    actualizarVencimientoPresupuesto();
+
+    mostrarMsgLista(`Presupuesto ${numero} cargado ✓ — podés editarlo y volver a generar el PDF`, false);
+  }
+
+  function eliminarPresupuestoGuardado() {
+    const numero = document.getElementById('pr_lista').value;
+    if (!numero) { mostrarMsgLista('Elegí un presupuesto de la lista.', true); return; }
+    const guardados = getPresupuestosGuardados();
+    delete guardados[numero];
+    setPresupuestosGuardados(guardados);
+    refrescarListaPresupuestos();
+    mostrarMsgLista(`Presupuesto ${numero} eliminado`, false);
+  }
+
+  function nuevoPresupuesto() {
+    // Solo avanzamos el número si el actual ya se llegó a guardar/emitir;
+    // si era un borrador sin usar, no desperdiciamos el número.
+    const numeroActual = document.getElementById('pr_numero').value.trim();
+    const guardados = getPresupuestosGuardados();
+    if (guardados[numeroActual]) { incrementarContadorPresupuesto(); }
+
+    prItems = [];
+    addPresupuestoItem();
+
+    document.getElementById('pr_clienteNombre').value = '';
+    document.getElementById('pr_clienteTel').value = '';
+    document.getElementById('pr_clienteEmail').value = '';
+    document.getElementById('pr_cuit').value = '';
+    document.getElementById('pr_razonSocial').value = '';
+    document.getElementById('pr_domicilio').value = '';
+    document.getElementById('pr_incluirIva').checked = false;
+    document.getElementById('pr_pctIva').value = '21';
+    document.getElementById('pr_condiciones').value = 'El trabajo se confirma con una seña del 50% del monto total. El saldo restante deberá abonarse al finalizar la obra, contra entrega y verificación del servicio. Los precios cotizados se mantienen por 15 días y no incluyen materiales adicionales o modificaciones solicitadas posteriormente.';
+    document.getElementById('pr_otrosDetalles').value = 'Cualquier modificación fuera de lo presupuestado podrá ajustar el costo final. No se incluyen tareas de albañilería o pintura fuera de lo indicado. El trabajo se realizará con los materiales especificados anteriormente.';
+    document.getElementById('pr_validez').value = '20';
+
     document.getElementById('pr_numero').value = siguienteNumeroPresupuesto();
+    actualizarVencimientoPresupuesto();
+    calcularTotalesPresupuesto();
+
+    mostrarMsgLista('Formulario listo para un presupuesto nuevo', false);
   }
 
   addPresupuestoItem();
   actualizarVencimientoPresupuesto();
   document.getElementById('pr_numero').value = siguienteNumeroPresupuesto();
+  refrescarListaPresupuestos();
 </script>
 </body>
 </html>
