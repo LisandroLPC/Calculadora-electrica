@@ -1992,7 +1992,7 @@
     const incluirIva = document.getElementById('pr_incluirIva').checked;
     const pctIva = parseNum(document.getElementById('pr_pctIva').value) || 0;
     const numero = document.getElementById('pr_numero').value || '';
-    const clienteNombre = document.getElementById('pr_clienteNombre').value || '—';
+    const clienteNombre = document.getElementById('pr_clienteNombre').value || '';
     const clienteTel = document.getElementById('pr_clienteTel').value || '';
     const clienteEmail = document.getElementById('pr_clienteEmail').value || '';
     const cuit = document.getElementById('pr_cuit').value || '';
@@ -2000,8 +2000,13 @@
     const domicilio = document.getElementById('pr_domicilio').value || '';
     const condiciones = document.getElementById('pr_condiciones').value || '';
     const otrosDetalles = document.getElementById('pr_otrosDetalles').value || '';
-    const whatsapp = document.getElementById('pr_whatsapp').value || '—';
-    const instagram = document.getElementById('pr_instagram').value || '—';
+    const whatsapp = document.getElementById('pr_whatsapp').value || '';
+    const instagram = document.getElementById('pr_instagram').value || '';
+
+    // Dibuja "Etiqueta: valor" solo si hay valor cargado; si no, deja el renglón sin texto
+    function textoSiHay(campo, valor, x, yPos) {
+      if (valor && valor.trim() !== '') doc.text(`${campo}: ${valor}`, x, yPos);
+    }
 
     // --- Logo ---
     try {
@@ -2025,15 +2030,17 @@
     let y = 52;
     doc.setFontSize(9); doc.setTextColor(214, 36, 26); doc.setFont(undefined, 'bold');
     doc.text('CLIENTE', 14, y);
-    doc.setFontSize(14); doc.setTextColor(30, 30, 30);
-    doc.text(clienteNombre, 14, y + 7);
+    if (clienteNombre.trim() !== '') {
+      doc.setFontSize(14); doc.setTextColor(30, 30, 30);
+      doc.text(clienteNombre, 14, y + 7);
+    }
 
     doc.setFontSize(8); doc.setTextColor(30, 30, 30); doc.setFont(undefined, 'normal');
     doc.setFillColor(235, 235, 235);
     doc.rect(14, y + 12, 88, 7, 'F');
-    doc.text(`Teléfono: ${clienteTel}`, 16, y + 16.5);
+    textoSiHay('Teléfono', clienteTel, 16, y + 16.5);
     doc.rect(14, y + 20, 88, 7, 'F');
-    doc.text(`Email: ${clienteEmail}`, 16, y + 24.5);
+    textoSiHay('Email', clienteEmail, 16, y + 24.5);
 
     // --- Datos impositivos ---
     doc.setFontSize(9); doc.setTextColor(214, 36, 26); doc.setFont(undefined, 'bold');
@@ -2041,13 +2048,13 @@
     doc.setFontSize(8); doc.setTextColor(30, 30, 30); doc.setFont(undefined, 'normal');
     doc.setFillColor(235, 235, 235);
     doc.rect(110, y + 4, 86, 7, 'F');
-    doc.text(`Cuit-Cuil: ${cuit}`, 112, y + 8.5);
+    textoSiHay('Cuit-Cuil', cuit, 112, y + 8.5);
     doc.rect(110, y + 12, 86, 7, 'F');
-    doc.text(`Razón Social: ${razonSocial}`, 112, y + 16.5);
+    textoSiHay('Razón Social', razonSocial, 112, y + 16.5);
     doc.rect(110, y + 20, 86, 7, 'F');
-    doc.text(`Domicilio: ${domicilio}`, 112, y + 24.5);
+    textoSiHay('Domicilio', domicilio, 112, y + 24.5);
 
-    // --- Tabla de ítems ---
+    // --- Tabla de ítems (layout fijo: la tabla siempre llega hasta ITEMS_BOTTOM) ---
     y += 34;
     doc.setFillColor(30, 30, 32);
     doc.rect(14, y, 182, 8, 'F');
@@ -2058,34 +2065,56 @@
     doc.text('TOTAL', 186, y + 5.5, { align: 'center' });
     y += 8;
 
+    const ITEMS_TOP = y;
+    const ITEMS_BOTTOM = 200;   // posición fija donde termina la tabla
+    const TOTALS_TOP = 205;     // posición fija de Subtotal/IVA/TOTAL
+    const COND_TOP = 234;       // posición fija de Condiciones/Otros detalles
+    const FIRMA_Y = 268;        // posición fija de la línea de firma
+
+    // Precalculamos la altura real que ocupan los ítems cargados
+    const filasReales = prItems.map(it => {
+      const precio = parseNum(it.precio) || 0;
+      const cant = parseNum(it.cantidad) || 0;
+      const descLines = doc.splitTextToSize(it.descripcion || '', 105);
+      const rowH = Math.max(9, descLines.length * 4.5 + 4);
+      return { it, precio, cant, total: precio * cant, descLines, rowH };
+    });
+    const alturaNecesaria = filasReales.reduce((acc, f) => acc + f.rowH, 0);
+    const entraEnLayoutFijo = (ITEMS_TOP + alturaNecesaria) <= ITEMS_BOTTOM;
+
     doc.setFont(undefined, 'normal'); doc.setTextColor(30, 30, 30);
-    const filasMinimas = Math.max(prItems.length, 4);
-    for (let i = 0; i < filasMinimas; i++) {
-      const it = prItems[i];
-      const precio = it ? (parseNum(it.precio) || 0) : 0;
-      const cant = it ? (parseNum(it.cantidad) || 0) : 0;
-      const totalItem = precio * cant;
-      const descLines = it ? doc.splitTextToSize(it.descripcion || '', 105) : [''];
-      const rowH = Math.max(10, descLines.length * 4.5 + 4);
+    let idxFila = 0;
 
-      if (y + rowH > 265) { doc.addPage(); y = 18; }
-
-      if (i % 2 === 0) { doc.setFillColor(240, 240, 240); doc.rect(14, y, 182, rowH, 'F'); }
-
+    filasReales.forEach(f => {
+      if (!entraEnLayoutFijo && y + f.rowH > 265) { doc.addPage(); y = 18; }
+      if (idxFila % 2 === 0) { doc.setFillColor(240, 240, 240); doc.rect(14, y, 182, f.rowH, 'F'); }
       doc.setFontSize(8);
-      if (it) {
-        doc.text(descLines, 16, y + 5);
-        doc.text(formatMoneyAR(precio), 128, y + rowH/2 + 1.5, { align: 'center' });
-        doc.text(String(cant || ''), 155, y + rowH/2 + 1.5, { align: 'center' });
-        doc.setFont(undefined, 'bold');
-        doc.text(formatMoneyAR(totalItem), 186, y + rowH/2 + 1.5, { align: 'center' });
-        doc.setFont(undefined, 'normal');
+      doc.text(f.descLines, 16, y + 5);
+      doc.text(formatMoneyAR(f.precio), 128, y + f.rowH/2 + 1.5, { align: 'center' });
+      doc.text(String(f.cant || ''), 155, y + f.rowH/2 + 1.5, { align: 'center' });
+      doc.setFont(undefined, 'bold');
+      doc.text(formatMoneyAR(f.total), 186, y + f.rowH/2 + 1.5, { align: 'center' });
+      doc.setFont(undefined, 'normal');
+      y += f.rowH;
+      idxFila++;
+    });
+
+    if (entraEnLayoutFijo) {
+      // Rellenamos el espacio restante con renglones vacíos sombreados hasta ITEMS_BOTTOM
+      const FILLER_H = 9;
+      while (y + FILLER_H <= ITEMS_BOTTOM) {
+        if (idxFila % 2 === 0) { doc.setFillColor(240, 240, 240); doc.rect(14, y, 182, FILLER_H, 'F'); }
+        y += FILLER_H;
+        idxFila++;
       }
-      y += rowH;
+      if (ITEMS_BOTTOM - y > 0) {
+        if (idxFila % 2 === 0) { doc.setFillColor(240, 240, 240); doc.rect(14, y, 182, ITEMS_BOTTOM - y, 'F'); }
+        y = ITEMS_BOTTOM;
+      }
     }
 
-    // --- Totales ---
-    y += 6;
+    // --- Totales (posición fija si entró en el layout fijo, si no continúa después de la tabla) ---
+    y = entraEnLayoutFijo ? TOTALS_TOP : y + 6;
     if (y > 250) { doc.addPage(); y = 18; }
     const totX = 130, totW = 66;
     doc.setDrawColor(180, 180, 180); doc.setLineWidth(0.3);
@@ -2103,37 +2132,39 @@
     doc.setTextColor(255, 255, 255); doc.setFont(undefined, 'bold'); doc.setFontSize(11);
     doc.text('TOTAL', totX + 3, y + 6);
     doc.text(formatMoneyAR(total), totX + totW - 3, y + 6, { align: 'right' });
-    y += 16;
 
-    // --- Condiciones y otros detalles ---
-    if (y > 235) { doc.addPage(); y = 18; }
-    const yCond = y;
+    // --- Condiciones y otros detalles (posición fija) ---
+    const yCond = entraEnLayoutFijo ? COND_TOP : y + 16;
+    if (yCond > 250) { doc.addPage(); }
     doc.setFontSize(9); doc.setTextColor(214, 36, 26); doc.setFont(undefined, 'bold');
     doc.text('CONDICIONES DE PAGO', 14, yCond);
     doc.setFontSize(7.5); doc.setTextColor(60, 60, 60); doc.setFont(undefined, 'normal');
-    const condLines = doc.splitTextToSize(condiciones, 85);
-    doc.text(condLines, 14, yCond + 5);
+    if (condiciones.trim() !== '') doc.text(doc.splitTextToSize(condiciones, 85), 14, yCond + 5);
 
     doc.setFontSize(9); doc.setTextColor(214, 36, 26); doc.setFont(undefined, 'bold');
     doc.text('OTROS DETALLES', 110, yCond);
     doc.setFontSize(7.5); doc.setTextColor(60, 60, 60); doc.setFont(undefined, 'normal');
-    const otrosLines = doc.splitTextToSize(otrosDetalles, 86);
-    doc.text(otrosLines, 110, yCond + 5);
+    if (otrosDetalles.trim() !== '') doc.text(doc.splitTextToSize(otrosDetalles, 86), 110, yCond + 5);
 
-    const yFirma = yCond + Math.max(condLines.length, otrosLines.length) * 3.6 + 14;
+    // --- Firma (posición fija) ---
+    const yFirma = entraEnLayoutFijo ? FIRMA_Y : yCond + 34;
     doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.3);
     doc.line(140, yFirma, 196, yFirma);
     doc.setFontSize(7.5); doc.setTextColor(100, 100, 100);
     doc.text('FIRMA CLIENTE', 168, yFirma + 4, { align: 'center' });
 
+    // --- Leyenda legal ---
+    doc.setFontSize(6.5); doc.setTextColor(140, 140, 140); doc.setFont(undefined, 'normal');
+    doc.text('Este documento es un presupuesto estimado y no tiene validez como factura ni como comprobante de pago.', 105, 281, { align: 'center' });
+
     // --- Pie con contacto ---
     doc.setFillColor(20, 20, 22);
     doc.rect(0, 284, 210, 13, 'F');
     doc.setFontSize(9); doc.setTextColor(255, 255, 255); doc.setFont(undefined, 'bold');
-    doc.text(`WhatsApp: ${whatsapp}`, 14, 292);
-    doc.text(`Instagram: ${instagram}`, 196, 292, { align: 'right' });
+    if (whatsapp.trim() !== '') doc.text(`WhatsApp: ${whatsapp}`, 14, 292);
+    if (instagram.trim() !== '') doc.text(`Instagram: ${instagram}`, 196, 292, { align: 'right' });
 
-    const filename = `Presupuesto_${clienteNombre.replace(/[^a-zA-Z0-9]+/g, '_') || 'sin_nombre'}.pdf`;
+    const filename = `Presupuesto_${(clienteNombre || 'sin_nombre').replace(/[^a-zA-Z0-9]+/g, '_')}.pdf`;
     const blob = doc.output('blob');
     compartirPDF(blob, filename, msg);
 
