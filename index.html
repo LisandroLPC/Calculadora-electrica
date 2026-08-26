@@ -961,14 +961,14 @@
 
     document.getElementById('screen-auth').classList.add('hidden');
 
-    if (error || !perfil || perfil.estado_suscripcion !== 'activa') {
+    const estadoLimpio = (perfil && perfil.estado_suscripcion) ? perfil.estado_suscripcion.trim().toLowerCase() : '';
+    if (error || !perfil || estadoLimpio !== 'activa') {
       const mensajes = {
         prueba: 'Tu cuenta está registrada pero todavía no fue activada. Contactá a Lisandro Lalli para habilitar tu acceso.',
         vencida: 'Tu suscripción venció. Contactá a Lisandro Lalli para renovarla.',
         cancelada: 'Tu suscripción está cancelada. Contactá a Lisandro Lalli si querés reactivarla.',
       };
-      const estado = perfil ? perfil.estado_suscripcion : 'prueba';
-      document.getElementById('blockedMsg').textContent = mensajes[estado] || mensajes.prueba;
+      document.getElementById('blockedMsg').textContent = mensajes[estadoLimpio] || mensajes.prueba;
       document.getElementById('screen-home').classList.add('hidden');
       document.getElementById('screen-blocked').classList.remove('hidden');
       return;
