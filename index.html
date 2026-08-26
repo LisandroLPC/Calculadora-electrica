@@ -464,6 +464,16 @@
     </div>
   </div>
 
+  <!-- ===================== ACCESO PENDIENTE / BLOQUEADO ===================== -->
+  <div id="screen-blocked" class="hidden">
+    <div class="auth-wrap">
+      <div style="width:80px; height:80px; border-radius:50%; background:#201f21; border:2px solid #D6241A; display:flex; align-items:center; justify-content:center; font-size:36px;">⏳</div>
+      <div class="home-title">Acceso pendiente</div>
+      <p class="home-sub" id="blockedMsg" style="max-width:320px;">Tu cuenta todavía no tiene una suscripción activa. Contactá a Lisandro Lalli para habilitarla.</p>
+      <button class="logout-btn" style="float:none; margin-top:10px;" onclick="cerrarSesion()">Cerrar sesión</button>
+    </div>
+  </div>
+
   <!-- ===================== CARÁTULA / HOME ===================== -->
   <div id="screen-home" class="hidden">
     <button class="logout-btn" onclick="cerrarSesion()">Cerrar sesión</button>
@@ -933,13 +943,38 @@
     await supabaseClient.auth.signOut();
     document.getElementById('screen-app').classList.add('hidden');
     document.getElementById('screen-home').classList.add('hidden');
+    document.getElementById('screen-blocked').classList.add('hidden');
     document.getElementById('screen-auth').classList.remove('hidden');
     document.getElementById('auth_email').value = '';
     document.getElementById('auth_password').value = '';
   }
 
-  function mostrarApp() {
+  async function mostrarApp() {
+    const { data: userData } = await supabaseClient.auth.getUser();
+    if (!userData.user) { document.getElementById('screen-auth').classList.remove('hidden'); return; }
+
+    const { data: perfil, error } = await supabaseClient
+      .from('perfiles')
+      .select('estado_suscripcion, nombre_negocio')
+      .eq('id', userData.user.id)
+      .single();
+
     document.getElementById('screen-auth').classList.add('hidden');
+
+    if (error || !perfil || perfil.estado_suscripcion !== 'activa') {
+      const mensajes = {
+        prueba: 'Tu cuenta está registrada pero todavía no fue activada. Contactá a Lisandro Lalli para habilitar tu acceso.',
+        vencida: 'Tu suscripción venció. Contactá a Lisandro Lalli para renovarla.',
+        cancelada: 'Tu suscripción está cancelada. Contactá a Lisandro Lalli si querés reactivarla.',
+      };
+      const estado = perfil ? perfil.estado_suscripcion : 'prueba';
+      document.getElementById('blockedMsg').textContent = mensajes[estado] || mensajes.prueba;
+      document.getElementById('screen-home').classList.add('hidden');
+      document.getElementById('screen-blocked').classList.remove('hidden');
+      return;
+    }
+
+    document.getElementById('screen-blocked').classList.add('hidden');
     document.getElementById('screen-home').classList.remove('hidden');
   }
 
