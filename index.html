@@ -2019,6 +2019,7 @@
 
     // Dibuja siempre "Etiqueta:" (el valor queda vacío si no fue cargado, pero la etiqueta se ve igual)
     function textoSiHay(campo, valor, x, yPos) {
+      doc.setTextColor(30, 30, 30); doc.setFont(undefined, 'normal'); doc.setFontSize(8);
       doc.text(`${campo}: ${valor || ''}`, x, yPos);
     }
 
@@ -2053,6 +2054,7 @@
     doc.setFillColor(235, 235, 235);
     doc.rect(14, y + 12, 88, 7, 'F');
     textoSiHay('Teléfono', clienteTel, 16, y + 16.5);
+    doc.setFillColor(235, 235, 235);
     doc.rect(14, y + 20, 88, 7, 'F');
     textoSiHay('Email', clienteEmail, 16, y + 24.5);
 
@@ -2063,8 +2065,10 @@
     doc.setFillColor(235, 235, 235);
     doc.rect(110, y + 4, 86, 7, 'F');
     textoSiHay('Cuit-Cuil', cuit, 112, y + 8.5);
+    doc.setFillColor(235, 235, 235);
     doc.rect(110, y + 12, 86, 7, 'F');
     textoSiHay('Razón Social', razonSocial, 112, y + 16.5);
+    doc.setFillColor(235, 235, 235);
     doc.rect(110, y + 20, 86, 7, 'F');
     textoSiHay('Domicilio', domicilio, 112, y + 24.5);
 
@@ -2114,17 +2118,19 @@
     });
 
     if (entraEnLayoutFijo) {
-      // Rellenamos el espacio restante con renglones vacíos sombreados hasta ITEMS_BOTTOM
-      const FILLER_H = 9;
-      while (y + FILLER_H <= ITEMS_BOTTOM) {
-        if (idxFila % 2 === 1) { doc.setFillColor(240, 240, 240); doc.rect(14, y, 182, FILLER_H, 'F'); }
-        y += FILLER_H;
-        idxFila++;
+      // Repartimos el espacio restante en renglones de igual altura (sin dejar un resto más chico al final)
+      const FILLER_H_APROX = 9;
+      const espacioRestante = ITEMS_BOTTOM - y;
+      if (espacioRestante > 0.5) {
+        const cantFillers = Math.max(1, Math.round(espacioRestante / FILLER_H_APROX));
+        const fillerH = espacioRestante / cantFillers;
+        for (let k = 0; k < cantFillers; k++) {
+          if (idxFila % 2 === 1) { doc.setFillColor(240, 240, 240); doc.rect(14, y, 182, fillerH, 'F'); }
+          y += fillerH;
+          idxFila++;
+        }
       }
-      if (ITEMS_BOTTOM - y > 0) {
-        if (idxFila % 2 === 1) { doc.setFillColor(240, 240, 240); doc.rect(14, y, 182, ITEMS_BOTTOM - y, 'F'); }
-        y = ITEMS_BOTTOM;
-      }
+      y = ITEMS_BOTTOM;
     }
 
     // --- Totales (posición fija si entró en el layout fijo, si no continúa después de la tabla) ---
