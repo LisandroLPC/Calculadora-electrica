@@ -891,7 +891,25 @@
   /* ============ SUPABASE ============ */
   const SUPABASE_URL = 'https://gvokktyrllfitbvpzpqj.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_MOsdgeDB2NLJKr3upZXhIQ_BWmAZNQW';
-  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true }
+  });
+
+  /* ============ CIERRE AUTOMÁTICO POR INACTIVIDAD ============ */
+  const INACTIVIDAD_LIMITE_MS = 15 * 60 * 1000; // 15 minutos
+  let temporizadorInactividad;
+
+  function reiniciarTemporizadorInactividad() {
+    clearTimeout(temporizadorInactividad);
+    temporizadorInactividad = setTimeout(async () => {
+      const { data } = await supabaseClient.auth.getSession();
+      if (data.session) { await cerrarSesion(); }
+    }, INACTIVIDAD_LIMITE_MS);
+  }
+  ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'].forEach(evt => {
+    document.addEventListener(evt, reiniciarTemporizadorInactividad, { passive: true });
+  });
+  reiniciarTemporizadorInactividad();
 
   let authModo = 'login'; // 'login' | 'registro'
 
